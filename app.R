@@ -16,7 +16,7 @@ if (suppressWarnings(require("sf"))==FALSE) {
         library("sf");
         }
 
-# Load or install sf package
+# Load or install shiny package
 if (suppressWarnings(require("shiny"))==FALSE) {
         install.packages("shiny",repos="http://cran.cnr.berkeley.edu/");
         library("shiny");
@@ -38,7 +38,7 @@ if (suppressWarnings(require("leaflet"))==FALSE) {
 if (suppressWarnings(require("mapview"))==FALSE) {
         install.packages("mapview",repos="http://cran.cnr.berkeley.edu/");
         library("mapview");
-        } 
+        }
 
 #############################################################################################################
 ####################################### LOAD DATA FUNCTIONS, CONVERSION #####################################
@@ -47,11 +47,10 @@ if (suppressWarnings(require("mapview"))==FALSE) {
 
 ######################################### LOAD DATA SCRIPT, CONVERSION ######################################
 # Download the config file
-#Credentials<-as.matrix(read.table("./credentials/Credentials.yml",row.names=1))
+Credentials<-as.matrix(read.table("./credentials/Credentials.yml",row.names=1))
 # Connect to PostgreSQL
 Driver <- dbDriver("PostgreSQL") # Establish database driver
-#Connection <- dbConnect(Driver, dbname = Credentials["database:",], host = Credentials["host:",], port = Credentials["port:",], user = Credentials["user:",], password = Credentials["password:",])
-Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "developer", password = "password")
+Connection <- dbConnect(Driver, dbname = Credentials["database:",], host = Credentials["host:",], port = Credentials["port:",], user = Credentials["user:",], password = Credentials["password:",])
 
 # Construct the Query
 Query<-paste0(
@@ -71,6 +70,9 @@ Query<-paste0(
 # Query available ncgmp09 datasets
 NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
 
+# Query available counties
+Counties<-suppressWarnings(dbGetQuery(Connection,"SELECT arizona_place_id AS place_id, arizona_place_name AS place_name, geom FROM dicts.arizona_places WHERE placetype='county' AND within_arizona = 'TRUE';"))
+
 #############################################################################################################
 ###################################### BUILD PAGE FUNCTIONS, CONVERSION #####################################
 #############################################################################################################
@@ -84,6 +86,7 @@ ui <- fluidPage(
         # Sidebar with a slider input for number of bins 
         sidebarLayout(
                 sidebarPanel(
+                        selectInput("county","Choose a county",choices = Counties$place_name),
                         selectInput("map", "Choose a map:",choices = NCGMP09_titles$title),
                         selectInput("format","Choose a map format:",choices = c("GeoJSON","KML","ESRI Shapefile")),
                         # Button
@@ -168,8 +171,7 @@ server <- function(input, output) {
            },
            content = function(file) {
                    sf::st_write(queryMap(collection_id()),file)
-           }
-   )
+           })
    }
 
 # Run the application 

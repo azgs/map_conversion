@@ -1,0 +1,917 @@
+Output<-sapply(Points[,"column_id"],getUnits)
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",x$column_id)#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x$point_id,x$column_id,Units))#
+        }
+Output<-apply(Points,1,getUnits)
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",x["column_id"])#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"],x["column_id"],Units))#
+        }
+Output<-apply(Points,1,getUnits)
+head(Points)
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(x["column_id"]))#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"],x["column_id"],Units))#
+        }
+Output<-apply(Points,1,getUnits)
+Output<-apply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("pbapply"))==FALSE) {#
+        install.packages("pbapply",repos="http://cran.cnr.berkeley.edu/");#
+        library("pbapply");#
+        }
+Output<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+head(Output)
+length(unique(column_id))
+length(unique(Points#column_id))
+length(unique(Points$column_id))
+for (i in unique(Points$column_id)) {read.csv(paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(i))); print(i)}
+unique(Points$column_id)
+# Methods and Functions are camelCase. Variables and Data Structures are PascalCase#
+# Fields generally follow snake_case for better SQL compatibility#
+# Dependency functions are not embedded in master functions#
+# []-notation is used wherever possible, and $-notation is avoided.#
+# []-notation is slower, but more explicit and works for atomic vectors#
+#
+######################################### Load Required Libraries ############################################
+# Load or install velociraptr#
+if (suppressWarnings(require("velociraptr"))==FALSE) {#
+        nstall.packages("velociraptr",repos="http://cran.cnr.berkeley.edu/");#
+        library("velociraptr");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("RPostgreSQL"))==FALSE) {#
+        install.packages("RPostgreSQL",repos="http://cran.cnr.berkeley.edu/");#
+        library("RPostgreSQL");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("vegan"))==FALSE) {#
+        install.packages("vegan",repos="http://cran.cnr.berkeley.edu/");#
+        library("vegan");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("pbapply"))==FALSE) {#
+        install.packages("pbapply",repos="http://cran.cnr.berkeley.edu/");#
+        library("pbapply");#
+        }#
+#
+# Establish postgresql connection.#
+Driver<-dbDriver("PostgreSQL") # Set driver#
+# Your postgresql database connections#
+Burwell<-dbConnect(Driver, dbname = "burwell", host = "localhost", port = 5439, user = "postgres") # assumes ssh connection to teststrata
+dbSendQuery(Burwell,"CREATE TABLE IF NOT EXISTS geoprocessing.random_points AS SELECT (ST_Dump(ST_GeneratePoints(ST_Union(poly_geom), 1000))).geom AS geom FROM macrostrat.cols WHERE project_id = 1 AND status_code='active';")
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS point_id serial PRIMARY KEY, column_id integer;")
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS point_id serial PRIMARY KEY;")#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS column_id integer;")
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS B SET column_id = id FROM#
+        (SELECT point_id, id FROM geoprocessing.random_points JOIN macrostrat.cols ON ST_Intersects(geom,poly_geom)) AS A #
+        WHERE B.point_id = A.point_id;")
+# Select the data into R#
+Points<-dbGetQuery(Burwell,"SELECT point_id,column_id FROM geoprocessing.random_points;")
+##############################################################################################################
+######################################### PBDB DATA FUNCTIONS, ALICE #########################################
+#############################################################################################################		#
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(x["column_id"]))#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"],Units))#
+        }#
+################################################# PBDB Load Data #############################################
+# Extract the units in each sample#
+Units<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(x["column_id"]))#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"],unit_id))#
+        }
+# Extract the units in each sample#
+Units<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+for (i in unique(Points$column_id)) {read.csv(paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(i))); print(i)}
+unique(Points$column_id)
+# Create a set of 1000 random points if it doesn't already exist#
+dbSendQuery(Burwell,"CREATE TABLE IF NOT EXISTS geoprocessing.random_points AS SELECT (ST_Dump(ST_GeneratePoints(ST_Union(poly_geom), 1000))).geom AS geom FROM macrostrat.cols WHERE project_id = 1 AND status_code='active';")#
+# Add primary and foreignn key fields if they don't already exist#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS point_id serial PRIMARY KEY;")#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS column_id integer;")#
+#
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS B SET column_id = id FROM#
+        (SELECT point_id, id FROM geoprocessing.random_points JOIN macrostrat.cols ON ST_Intersects(geom,poly_geom)) AS A #
+        WHERE B.point_id = A.point_id AND status_code='active';")#
+#
+# Select the data into R#
+Points<-dbGetQuery(Burwell,"SELECT point_id,column_id FROM geoprocessing.random_points;")#
+#
+# Extract the units in each sample#
+Units<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+#########################################  DATA SCRIPTS, BURWELL #############################################
+# Create a set of 1000 random points if it doesn't already exist#
+dbSendQuery(Burwell,"CREATE TABLE IF NOT EXISTS geoprocessing.random_points AS SELECT (ST_Dump(ST_GeneratePoints(ST_Union(poly_geom), 1000))).geom AS geom FROM macrostrat.cols WHERE project_id = 1 AND status_code='active';")#
+# Add primary and foreignn key fields if they don't already exist#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS point_id serial PRIMARY KEY;")#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS column_id integer;")#
+#
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS B SET column_id = id FROM#
+        (SELECT point_id, id FROM geoprocessing.random_points JOIN (SELECT * FROM macrostrat.cols WHERE status_code='active' AND project_id=1) ON ST_Intersects(geom,poly_geom)) AS A #
+        WHERE B.point_id = A.point_id;")
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id, id FROM A) AS B#
+        JOIN (SELECT * FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(geom,poly_geom))#
+        WHERE B.point_id = C.point_id;")
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id, id FROM A) AS B#
+        JOIN (SELECT * FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(geom,poly_geom)#
+        WHERE B.point_id = C.point_id;")
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id, id FROM geoprocessing.random_points) AS B#
+        JOIN (SELECT * FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(geom,poly_geom)#
+        WHERE B.point_id = C.point_id;")
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id, geom FROM geoprocessing.random_points) AS B#
+        JOIN (SELECT * FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(geom,poly_geom)#
+        WHERE B.point_id = C.point_id;")
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id, geom FROM geoprocessing.random_points) AS B#
+        JOIN (SELECT * FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(geom,poly_geom)#
+        WHERE a.point_id = b.point_id;")
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id, geom FROM geoprocessing.random_points) AS B#
+        JOIN (SELECT id, poly_geom FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(geom,poly_geom)#
+        WHERE a.point_id = b.point_id;")
+# Select the data into R#
+Points<-dbGetQuery(Burwell,"SELECT point_id,column_id FROM geoprocessing.random_points;")#
+#
+# Extract the units in each sample#
+Units<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+        SET column_id = id #
+        FROM (SELECT point_id AS unique_id, geom FROM geoprocessing.random_points) AS B#
+        JOIN (SELECT id, poly_geom AS geom FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(B.geom,C.geom)#
+        WHERE point_id = unique_id;")
+head(Units)
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points #
+        SET column_id = id #
+        FROM (SELECT point_id AS unique_id, geom FROM geoprocessing.random_points) AS B#
+        JOIN (SELECT id, poly_geom AS geom FROM macrostrat.cols WHERE status_code='active' AND project_id=1) AS C #
+        ON ST_Intersects(B.geom,C.geom)#
+        WHERE point_id = unique_id;")
+Units<-do.call(rbind,Units)
+head(Units)
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(x["column_id"]))#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"]=point_id,unit_id))#
+        }
+colnames(Units)
+head(units)
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+                SET column_id = id #
+                FROM geoprocessing.random_points B#
+                JOIN macrostrat.cols C #
+                ON ST_Intersects(B.geom,C.geom)#
+                WHERE A.point_id = B.point_id AND status_code = 'active' AND project_id = 1")
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+                SET column_id = id #
+                FROM geoprocessing.random_points B#
+                JOIN macrostrat.cols C #
+                ON ST_Intersects(B.geom,C.poly_geom)#
+                WHERE A.point_id = B.point_id AND status_code = 'active' AND project_id = 1")
+?presenceMatrix
+# Conver into a community matrix#
+Community<-velociraptr::presenceMatrix(Units,"","unit_id")
+colnames(Units)<-c("point_id","unit_id")
+head(Units)
+# Conver into a community matrix#
+Community<-velociraptr::presenceMatrix(Units,"point_id","unit_id")
+head(Community)
+sum(Community)
+specaccum(Community)
+# Caclualte the specaccum results#
+Accumulation<-specaccum(Community)
+head(Accumulation)
+plot(Accumulation)
+# Methods and Functions are camelCase. Variables and Data Structures are PascalCase#
+# Fields generally follow snake_case for better SQL compatibility#
+# Dependency functions are not embedded in master functions#
+# []-notation is used wherever possible, and $-notation is avoided.#
+# []-notation is slower, but more explicit and works for atomic vectors#
+#
+######################################### Load Required Libraries ############################################
+# Load or install velociraptr#
+if (suppressWarnings(require("velociraptr"))==FALSE) {#
+        nstall.packages("velociraptr",repos="http://cran.cnr.berkeley.edu/");#
+        library("velociraptr");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("RPostgreSQL"))==FALSE) {#
+        install.packages("RPostgreSQL",repos="http://cran.cnr.berkeley.edu/");#
+        library("RPostgreSQL");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("vegan"))==FALSE) {#
+        install.packages("vegan",repos="http://cran.cnr.berkeley.edu/");#
+        library("vegan");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("pbapply"))==FALSE) {#
+        install.packages("pbapply",repos="http://cran.cnr.berkeley.edu/");#
+        library("pbapply");#
+        }#
+#
+# Establish postgresql connection.#
+Driver<-dbDriver("PostgreSQL") # Set driver#
+# Your postgresql database connections#
+Burwell<-dbConnect(Driver, dbname = "burwell", host = "localhost", port = 5439, user = "postgres") # assumes ssh connection to teststrata#
+#
+##############################################################################################################
+########################################  DATA FUNCTIONS, BURWELL ############################################
+##############################################################################################################
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(x["column_id"]))#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"],unit_id))#
+        }#
+#
+#########################################  DATA SCRIPTS, BURWELL #############################################
+# Create a set of 1000 random points if it doesn't already exist#
+dbSendQuery(Burwell,"CREATE TABLE IF NOT EXISTS geoprocessing.random_points AS SELECT (ST_Dump(ST_GeneratePoints(ST_Union(poly_geom), 1000))).geom AS geom FROM macrostrat.cols WHERE project_id = 1 AND status_code='active';")#
+# Add primary and foreignn key fields if they don't already exist#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS point_id serial PRIMARY KEY;")#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS column_id integer;")#
+#
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+                SET column_id = id #
+                FROM geoprocessing.random_points B#
+                JOIN macrostrat.cols C #
+                ON ST_Intersects(B.geom,C.poly_geom)#
+                WHERE A.point_id = B.point_id AND status_code = 'active' AND project_id = 1")
+# Methods and Functions are camelCase. Variables and Data Structures are PascalCase#
+# Fields generally follow snake_case for better SQL compatibility#
+# Dependency functions are not embedded in master functions#
+# []-notation is used wherever possible, and $-notation is avoided.#
+# []-notation is slower, but more explicit and works for atomic vectors#
+#
+######################################### Load Required Libraries ############################################
+# Load or install velociraptr#
+if (suppressWarnings(require("velociraptr"))==FALSE) {#
+        nstall.packages("velociraptr",repos="http://cran.cnr.berkeley.edu/");#
+        library("velociraptr");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("RPostgreSQL"))==FALSE) {#
+        install.packages("RPostgreSQL",repos="http://cran.cnr.berkeley.edu/");#
+        library("RPostgreSQL");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("vegan"))==FALSE) {#
+        install.packages("vegan",repos="http://cran.cnr.berkeley.edu/");#
+        library("vegan");#
+        }#
+#
+# Load or install the RPostgreSQL#
+if (suppressWarnings(require("pbapply"))==FALSE) {#
+        install.packages("pbapply",repos="http://cran.cnr.berkeley.edu/");#
+        library("pbapply");#
+        }#
+#
+# Establish postgresql connection.#
+Driver<-dbDriver("PostgreSQL") # Set driver#
+# Your postgresql database connections#
+Burwell<-dbConnect(Driver, dbname = "burwell", host = "localhost", port = 5439, user = "postgres") # assumes ssh connection to teststrata#
+#
+##############################################################################################################
+########################################  DATA FUNCTIONS, BURWELL ############################################
+##############################################################################################################
+# Get units according to API#
+getUnits<-function(x) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",as.numeric(x["column_id"]))#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(x["point_id"],unit_id))#
+        }#
+#
+#########################################  DATA SCRIPTS, BURWELL #############################################
+# Create a set of 1000 random points if it doesn't already exist#
+dbSendQuery(Burwell,"CREATE TABLE IF NOT EXISTS geoprocessing.random_points AS SELECT (ST_Dump(ST_GeneratePoints(ST_Union(poly_geom), 10000))).geom AS geom FROM macrostrat.cols WHERE project_id = 1 AND status_code='active';")#
+# Add primary and foreignn key fields if they don't already exist#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS point_id serial PRIMARY KEY;")#
+dbSendQuery(Burwell,"ALTER TABLE geoprocessing.random_points ADD COLUMN IF NOT EXISTS column_id integer;")#
+#
+# Populate the column_id field based on intersections with macrostrat#
+dbSendQuery(Burwell,"UPDATE geoprocessing.random_points AS A #
+                SET column_id = id #
+                FROM geoprocessing.random_points B#
+                JOIN macrostrat.cols C #
+                ON ST_Intersects(B.geom,C.poly_geom)#
+                WHERE A.point_id = B.point_id AND status_code = 'active' AND project_id = 1")#
+#
+# Select the data into R#
+Points<-dbGetQuery(Burwell,"SELECT point_id,column_id FROM geoprocessing.random_points;")#
+#
+# Extract the units in each sample#
+Units<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+# Select the data into R#
+Points<-dbGetQuery(Burwell,"SELECT point_id,column_id FROM geoprocessing.random_points;")#
+#
+# Extract the units in each sample#
+Units<-pbapply(data.matrix(Points[,c("point_id","column_id")]),1,getUnits)
+head(Units)
+# Get the unit_id and strat_name lookup#
+Lookup<-dbGetQuery(Burwell,"SELECT unit_id,strat_name_id FROM macrostrat.unit_strat_names")
+head(Lookup)
+# Collapse into an adjacency list#
+Units<-do.call(rbind,Units)#
+colnames(Units)<-c("point_id","unit_id")
+head(Units)
+head(Lookup)
+# Get the unit_id and strat_name lookup#
+Lookup<-dbGetQuery(Burwell,"SELECT A.unit_id, B.strat_name_id, concept_id FROM macrostrat.unit_strat_names AS A JOIN macrostrat.lookup_strat_names AS B ON A.strat_name_id=B.strat_name_id;")#
+# Conver tthe null_concept id to strat_name id#
+Lookup[which(Lookup[,"concept_id"]==0),"concept_id"]<-Lookup[which(Lookup[,"concept_id"]==0),"unit_id"]
+head(Lookup)
+head(Units)
+Test<-merge(Units,Lookup,by="unit_id")
+head(Test)
+# Conver into a community matrix#
+Community<-velociraptr::presenceMatrix(Units,"point_id","concept_id")
+any(is.na(Test))
+# Merge the lookup and units by unit_id#
+Units<-merge(Units,Lookup,by="unit_id")#
+#
+# Conver into a community matrix#
+Community<-velociraptr::presenceMatrix(Units,"point_id","concept_id")
+head(Units)
+head(Community)
+# Caclualte the specaccum results#
+Accumulation<-specaccum(Community)#
+#
+# Plot them#
+plot(Accumulation)
+ncol(Community)
+nrow(Community)
+readline(sub bro)
+readline(sup bro)
+readline()
+Query<-readline()#
+SELECT char_string AS title#
+FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN (SELECT DISTINCT collection_id FROM ncgmp09."MapUnitPolys")) AS A,#
+jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+                     jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+                     jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+                     jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+                     jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+                     jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+                     ;")
+= function(a) { #
+    s = substitute(a) #
+    as.character(s) #
+}
+f= function(a) { #
+    s = substitute(a) #
+    as.character(s) #
+}
+f(a=SELECT char_string AS title#
+                           FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN (SELECT DISTINCT collection_id FROM ncgmp09."MapUnitPolys")) AS A,#
+                                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+                                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+                                jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+                                jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+                                jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+                                jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+                                ;)
+NCGMP09_titles<-dbGetQuery(Connection,#
+                           "SELECT char_string AS title#
+                           FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN (SELECT DISTINCT collection_id FROM ncgmp09."MapUnitPolys")) AS A,#
+                                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+                                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+                                jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+                                jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+                                jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+                                jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+                                ;")
+NCGMP09_titles<-dbGetQuery(Connection,#
+                           "SELECT char_string AS title#
+                           FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN (SELECT DISTINCT collection_id FROM ncgmp09.MapUnitPolys)) AS A,#
+                                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+                                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+                                jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+                                jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+                                jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+                                jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+                                ;")
+Connection <- dbConnect(Driver, dbname = "neodigenite", host = "localhost", port = 5446, user = "postgres")
+library(RPostgreSQL)
+Connection <- dbConnect(Driver, dbname = "neodigenite", host = "localhost", port = 5446, user = "postgres")
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "postgres")
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "postgres", password = "postgres")
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "developer", password = "postgres")
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "developer", password = "flukeuke")
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "developer", password = "password")
+# Query available ncgmp09 datasets#
+NCGMP09_titles<-dbGetQuery(Connection,#
+                           "SELECT char_string AS title#
+                           FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN (SELECT DISTINCT collection_id FROM ncgmp09.MapUnitPolys)) AS A,#
+                                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+                                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+                                jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+                                jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+                                jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+                                jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+                                ;")
+# Construct the Query#
+Query<-paste0(#
+             "SELECT char_string AS title#
+             FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN #
+             (SELECT DISTINCT collection_id FROM ncgmp09.",#
+             dQuote("MapUnitPolys"),#
+             ")) AS A,#
+             jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+             jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+             jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+             jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+             ;")#
+#
+# Query available ncgmp09 datasets#
+NCGMP09_titles<-dbGetQuery(Connection,Query)
+Query
+# Increase the timeout time and change the fancyquote settings#
+options(timeout=600, "useFancyQuotes"=FALSE)
+# Construct the Query#
+Query<-paste0(#
+             "SELECT char_string AS title#
+             FROM (SELECT json_data FROM metadata.metadata WHERE collection_id IN #
+             (SELECT DISTINCT collection_id FROM ncgmp09.",#
+             dQuote("MapUnitPolys"),#
+             ")) AS A,#
+             jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+             jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+             jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+             jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+             ;")#
+#
+# Query available ncgmp09 datasets#
+NCGMP09_titles<-dbGetQuery(Connection,Query)
+head(NCGMP09_titles)
+NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
+NCGMP09_titles
+# Construct the Query#
+Query<-paste0(#
+             "SELECT collection_id, char_string AS title#
+             FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id IN #
+             (SELECT DISTINCT collection_id FROM ncgmp09.",#
+             dQuote("MapUnitPolys"),#
+             ")) AS A,#
+             jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+             jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+             jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+             jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+             ;")#
+#
+# Query available ncgmp09 datasets#
+NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
+NCGMP09_titles
+# Query available ncgmp09 datasets#
+NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query,stringsAsFactors=FALSE))
+NCGMP09_titles
+?dbGetQuery
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "developer", password = "password")
+collection_id=12
+queryMap<-function(12) {#
+        Polygons<-paste0('SELECT "Label",geom FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))#
+        MapUnitPolys = sf::st_read(Connection,query = Polygons)#
+        Description<-paste0('SELECT "Label","AreaFillRGB" FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)#
+        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)#
+        return(MapUnitPolys)#
+        }
+queryMap<-function(collection_id) {#
+        Polygons<-paste0('SELECT "Label",geom FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))#
+        MapUnitPolys = sf::st_read(Connection,query = Polygons)#
+        Description<-paste0('SELECT "Label","AreaFillRGB" FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)#
+        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)#
+        return(MapUnitPolys)#
+        }
+Hi<-queryMap(12)
+Hi
+plot(Hi)
+sapply(Hi$AreaFillRGB,strsplit,";")
+do.call(rbind,sapply(Hi$AreaFillRGB,strsplit,";"))
+as.data.matrix(do.call(rbind,sapply(Hi$AreaFillRGB,strsplit,";")))
+data.matrix(do.call(rbind,sapply(Hi$AreaFillRGB,strsplit,";")))
+data.numeric(do.call(rbind,sapply(Hi$AreaFillRGB,strsplit,";")))
+as.numeric(do.call(rbind,sapply(Hi$AreaFillRGB,strsplit,";")))
+plot(Hi$geom)
+rgb("1","2","3")
+?rgb
+rgb("1","2","3",255)
+rgb(1,2,3,255)
+?rgb
+rgb(1,2,3,maxColorValue=255)
+Colors<-as.numeric(sapply(Hi$AreaFillRGB,strsplit,";"))
+Colors<-sapply(sapply(Hi$AreaFillRGB,strsplit,";"),as.numeric)
+Colors
+Colors<-sapply(Hi$AreaFillRGB,strsplit,";")
+Colors
+sapply(Colors,function(x) rgb(as.numeric(x[1],x[2],x[3],maxColorValue=255)))
+?rgb
+sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255)))
+Colors<-apply(Colors,function(x) sapply(x,as.numeric))
+Colors<-sapply(Colors,function(x) sapply(x,as.numeric))
+Colors
+Colors<-lapply(Colors,function(x) sapply(x,as.numeric))
+Colors
+Colors<-sapply(Hi$AreaFillRGB,strsplit,";")
+COlors
+Colors
+sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255)))
+sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))
+Colors<-sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))
+QueryMap<-queryMap(12)
+getColors<-function(QueryMap) {#
+        Colors<-as.numeric(sapply(Hi$AreaFillRGB,strsplit,";"))#
+        Colors<-sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(Colors)#
+        }
+# Plot the map#
+plotMap<-funtion(QueryMap) {#
+        plot(QueryMap$geom,col=getColors(QueryMap))#
+        }
+plotMap<-function(QueryMap) {#
+        plot(QueryMap$geom,col=getColors(QueryMap))#
+        }
+plotMap(QueryMap)
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        Colors<-as.numeric(sapply(QueryMap$AreaFillRGB,strsplit,";"))#
+        Colors<-sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(Colors)#
+        }#
+#
+# Plot the map#
+plotMap<-function(QueryMap) {#
+        plot(QueryMap$geom,col=getColors(QueryMap))#
+        }
+plotMap(QueryMap)
+getColors(QueryMap)
+Colors<-as.numeric(sapply(QueryMap$AreaFillRGB,strsplit,";"))
+QueryMap
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        Colors<-sapply(QueryMap$AreaFillRGB,strsplit,";")#
+        Colors<-sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(Colors)#
+        }#
+#
+# Plot the map#
+plotMap<-function(QueryMap) {#
+        plot(QueryMap$geom,col=getColors(QueryMap))#
+        }
+Colors<-as.numeric(sapply(QueryMap$AreaFillRGB,strsplit,";"))
+plotMap(QueryMap)
+# Plot the map#
+plotMap<-function(QueryMap,Title=input$map) {#
+        plot(QueryMap$geom,col=getColors(QueryMap),main=Title)#
+        }
+plotMap(QueryMap)
+rgb(0,0,0)
+Colors<-sapply(QueryMap$AreaFillRGB,strsplit,";")
+Colors
+NCGMP09_titles
+QueryMap<-queryMap(13)
+QueryMap
+Colors<-sapply(QueryMap$AreaFillRGB,strsplit,";")
+Colors
+sapply(Colors,function(x) any(is.na(x)))
+which(sapply(Colors,function(x) any(is.na(x))))
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        Colors<-sapply(QueryMap$AreaFillRGB,strsplit,";")#
+        # Replace null colors with white#
+        Colors[which(sapply(Colors,function(x) any(is.na(x))))]<-c(0,0,0)#
+        Colors<-sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(Colors)#
+        }
+getColors(QueryMap)
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        Colors<-sapply(QueryMap$AreaFillRGB,strsplit,";")#
+        # Replace null colors with white#
+        Colors[[which(sapply(Colors,function(x) any(is.na(x))))]]<-c(0,0,0)#
+        Colors<-sapply(Colors,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(Colors)#
+        }
+getColors(QueryMap)
+Colors[which(sapply(Colors,function(x) any(is.na(x))))]
+Test<-Colors[which(sapply(Colors,function(x) any(is.na(x))))]
+Test[[1]]<-c(0,0,0)
+Test
+collection_id=13
+Description<-paste0('SELECT "Label","AreaFillRGB" FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)
+DescriptionOfMapUnits
+DescriptionOfMapUnits<-gsub("","0;0;0")
+DescriptionOfMapUnits<-gsub("","0;0;0",DescriptionOfMapUnits)
+DescriptionOfMapUnits
+Description<-paste0('SELECT "Label","AreaFillRGB" FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)
+DescriptionOfMapUnits
+DescriptionOfMapUnits$AreaFillRGB
+gsub("","0;0;0",DescriptionOfMapUnits$AreaFillRGB)
+which(DescriptionOfMapUnits$AreaFillRGB=="")
+DescriptionOfMapUnits$AreaFillRGB[which(DescriptionOfMapUnits$AreaFillRGB=="")]<-"0;0;0"
+DescriptionOfMapUnits
+QueryMap$AreaFillRGB[which(QueryMap$AreaFillRGB=="")]<-"0;0;0"
+QueryMap
+QueryMap$AreaFillRGB
+QueryMap
+QueryMap<-subset(QueryMap,is.na(QueryMap$AreaFillRGB)!=TRUE)
+QueryMap
+mapview
+library(mapview)
+breweries
+# Methods and Functions are camelCase. Variables and Data Structures are PascalCase#
+# Fields generally follow snake_case for better SQL compatibility#
+# Dependency functions are not embedded in master functions#
+# []-notation is used wherever possible, and $-notation is avoided.#
+# []-notation is slower, but more explicit and works for atomic vectors#
+#
+##############################################################################################################
+############################################## CONFIGURATION, SCRIPT #########################################
+#############################################################################################################    #
+# Increase the timeout time and change the fancyquote settings#
+options(timeout=600, "useFancyQuotes"=FALSE)#
+#
+# Load or install sf package#
+if (suppressWarnings(require("sf"))==FALSE) {#
+        install.packages("sf",repos="http://cran.cnr.berkeley.edu/");#
+        library("sf");#
+        }#
+#
+# Load or install sf package#
+if (suppressWarnings(require("shiny"))==FALSE) {#
+        install.packages("shiny",repos="http://cran.cnr.berkeley.edu/");#
+        library("shiny");#
+        } #
+#
+# Load or install RPostgreSQL package#
+if (suppressWarnings(require("RPostgreSQL"))==FALSE) {#
+        install.packages("RPostgreSQL",repos="http://cran.cnr.berkeley.edu/");#
+        library("RPostgreSQL");#
+        } #
+#
+# Load or install leaflet package#
+if (suppressWarnings(require("leaflet"))==FALSE) {#
+        install.packages("leaflet",repos="http://cran.cnr.berkeley.edu/");#
+        library("leaflet");#
+        }#
+#
+# Load or install mapview package#
+if (suppressWarnings(require("mapview"))==FALSE) {#
+        install.packages("mapview",repos="http://cran.cnr.berkeley.edu/");#
+        library("mapview");#
+        } #
+#
+##############################################################################################################
+####################################### LOAD DATA FUNCTIONS, CONVERSION ######################################
+##############################################################################################################
+# No functions at this time#
+#
+######################################### LOAD DATA SCRIPT, CONVERSION #######################################
+# Download the config file#
+#Credentials<-as.matrix(read.table("./credentials/Credentials.yml",row.names=1))#
+# Connect to PostgreSQL#
+Driver <- dbDriver("PostgreSQL") # Establish database driver#
+#Connection <- dbConnect(Driver, dbname = Credentials["database:",], host = Credentials["host:",], port = Credentials["port:",], user = Credentials["user:",], password = Credentials["password:",])#
+Connection <- dbConnect(dbDriver("PostgreSQL"), dbname = "neodigenite", host = "localhost", port = 5446, user = "developer", password = "password")#
+#
+# Construct the Query#
+Query<-paste0(#
+             "SELECT collection_id, char_string AS title#
+             FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id IN #
+             (SELECT DISTINCT collection_id FROM ncgmp09.",#
+             dQuote("MapUnitPolys"),#
+             ")) AS A,#
+             jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+             jsonb_array_elements(dataID -> 'gmd:citation') citation,#
+             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,#
+             jsonb_array_elements(ci_citation -> 'gmd:title') title,#
+             jsonb_array_elements(title -> 'gco:CharacterString') char_string#
+             ;")#
+#
+# Query available ncgmp09 datasets#
+NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
+# Query the required map data and join it together#
+queryMap<-function(collection_id) {#
+        Polygons<-paste0('SELECT "Label",geom FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))#
+        MapUnitPolys = sf::st_read(Connection,query = Polygons)#
+        Description<-paste0('SELECT "Label","AreaFillRGB" FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)#
+        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)#
+        return(MapUnitPolys)#
+        }
+Map<-queryMap(12)
+mapview(Map)
+getColors(Map)
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        color<-sapply(QueryMap$color,strsplit,";")#
+        color<-sapply(color,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(color)#
+        }
+getColors(Map)
+Map
+# Query the required map data and join it together#
+queryMap<-function(collection_id) {#
+        Polygons<-paste0('SELECT "Label",geom FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))#
+        MapUnitPolys = sf::st_read(Connection,query = Polygons)#
+        Description<-paste0('SELECT "Label","AreaFillRGB" AS color FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)#
+        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)#
+        # Remove polys without color#
+        MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$color)!=TRUE)#
+        MapUnitPolys$color<-getColors(MapUnitPolys)#
+        return(MapUnitPolys)#
+        }#
+#
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        color<-sapply(QueryMap$color,strsplit,";")#
+        color<-sapply(color,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(color)#
+        }
+Map<-queryMap(12)
+getColors(Map)
+Map
+unique(MapColor)
+unique(Map$color)
+Colors<-unique(Map$color)
+colorRampPalette(Colors)
+colorRamp(Colors)
+Colors<-colorRampPalette(Colors)
+Colors
+Colors(1)
+Colors(2)
+?mapview
+library(mapview)
+?mapview
+library(mapviewOptions)
+library(mapview)
+mapviewOptions()
+mapviewOptions(basemaps="OpenStreetMap")
+mapviewGetOption("basemaps")
+mapviewOptions
+mapviewOptions()
+library(mapview)
+mapviewOptions()
+mapviewGetOption("basemaps")
+mapviewGetOption("basemaps")[3]
+mapviewGetOption("basemaps")
+library(mapview)
+mapviewGetOption("basemaps")
+setwd("~/Box Sync/GitRepositories/map_conversion")
+# Methods and Functions are camelCase. Variables and Data Structures are PascalCase#
+# Fields generally follow snake_case for better SQL compatibility#
+# Dependency functions are not embedded in master functions#
+# []-notation is used wherever possible, and $-notation is avoided.#
+# []-notation is slower, but more explicit and works for atomic vectors#
+#
+##############################################################################################################
+############################################## CONFIGURATION, SCRIPT #########################################
+#############################################################################################################    #
+# Increase the timeout time and change the fancyquote settings#
+options(timeout=600, "useFancyQuotes"=FALSE)#
+#
+# Load or install sf package#
+if (suppressWarnings(require("sf"))==FALSE) {#
+        install.packages("sf",repos="http://cran.cnr.berkeley.edu/");#
+        library("sf");#
+        }#
+#
+# Load or install sf package#
+if (suppressWarnings(require("shiny"))==FALSE) {#
+        install.packages("shiny",repos="http://cran.cnr.berkeley.edu/");#
+        library("shiny");#
+        } #
+#
+# Load or install RPostgreSQL package#
+if (suppressWarnings(require("RPostgreSQL"))==FALSE) {#
+        install.packages("RPostgreSQL",repos="http://cran.cnr.berkeley.edu/");#
+        library("RPostgreSQL");#
+        } #
+#
+# Load or install leaflet package#
+if (suppressWarnings(require("leaflet"))==FALSE) {#
+        install.packages("leaflet",repos="http://cran.cnr.berkeley.edu/");#
+        library("leaflet");#
+        }#
+#
+# Load or install mapview package#
+if (suppressWarnings(require("mapview"))==FALSE) {#
+        install.packages("mapview",repos="http://cran.cnr.berkeley.edu/");#
+        library("mapview");#
+        }
+##############################################################################################################
+####################################### LOAD DATA FUNCTIONS, CONVERSION ######################################
+##############################################################################################################
+# No functions at this time#
+#
+######################################### LOAD DATA SCRIPT, CONVERSION #######################################
+# Download the config file#
+Credentials<-as.matrix(read.table("./credentials/Credentials.yml",row.names=1))#
+# Connect to PostgreSQL#
+Driver <- dbDriver("PostgreSQL") # Establish database driver#
+Connection <- dbConnect(Driver, dbname = Credentials["database:",], host = Credentials["host:",], port = Credentials["port:",], user = Credentials["user:",], password = Credentials["password:",])
+##############################################################################################################
+######################################### SERVER FUNCTIONS, CONVERSION #######################################
+##############################################################################################################
+# Query the required map data and join it together#
+queryMap<-function(collection_id) {#
+        Polygons<-paste0('SELECT "Label",geom FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))#
+        MapUnitPolys = sf::st_read(Connection,query = Polygons)#
+        Description<-paste0('SELECT "Label","AreaFillRGB" AS color FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))#
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)#
+        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)#
+        # Remove polys without color#
+        MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$color)!=TRUE)#
+        MapUnitPolys$color<-getColors(MapUnitPolys)#
+        return(MapUnitPolys)#
+        }#
+#
+# Get the color vector from QueryMap#
+getColors<-function(QueryMap) {#
+        color<-sapply(QueryMap$color,strsplit,";")#
+        color<-sapply(color,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))#
+        return(color)#
+        }#
+#
+# Plot the map#
+plotMap<-function(QueryMap) {#
+        mapview(QueryMap,col.regions=QueryMap$color)@map#
+        }#
+#
+getAbstract<-function(collection_id) {#
+        # Construct the Query#
+        Query<-paste0(#
+                "SELECT char_string AS title#
+                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = '",collection_id,"') AS A,#
+                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,#
+                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,#
+                jsonb_array_elements(dataID -> 'gmd:abstract') abstract,#
+                jsonb_array_elements(abstract ->  'gco:CharacterString') char_string#
+                ;")#
+        # Query abstract#
+        Abstract<-suppressWarnings(dbGetQuery(Connection,Query))#
+        return(unlist(Abstract))#
+        }
+Map<-queryMap(12)
+mapviewOptions(basemaps=c("OpenStreetMap","CartoDB.Positron"))#
+    mapview(map,color=map$color)
+mapviewOptions(basemaps=c("OpenStreetMap","CartoDB.Positron"))#
+    mapview(Map,color=Map$color)
+leaflet(mapview(Map,color=Map$color)@map)
