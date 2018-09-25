@@ -1,3 +1,17 @@
+# Get units according to API#
+getUnits<-function(column_id) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",column_id)#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(column_id,Units))#
+        }
+Output<-sapply(Points[,"column_id"],getUnits)
+# Get units according to API#
+getUnits<-function(column_id) {#
+        URL<-paste0("https://macrostrat.org/api/v2/units?format=csv&col_id=",column_id)#
+        unit_id<-read.csv(URL)$unit_id#
+        return(cbind(column_id,Units))#
+        print(column_id)#
+        }
 Output<-sapply(Points[,"column_id"],getUnits)
 # Get units according to API#
 getUnits<-function(x) {#
@@ -811,9 +825,6 @@ library(mapview)
 mapviewOptions()
 mapviewGetOption("basemaps")
 mapviewGetOption("basemaps")[3]
-mapviewGetOption("basemaps")
-library(mapview)
-mapviewGetOption("basemaps")
 setwd("~/Box Sync/GitRepositories/map_conversion")
 # Methods and Functions are camelCase. Variables and Data Structures are PascalCase#
 # Fields generally follow snake_case for better SQL compatibility#
@@ -833,7 +844,7 @@ if (suppressWarnings(require("sf"))==FALSE) {#
         library("sf");#
         }#
 #
-# Load or install sf package#
+# Load or install shiny package#
 if (suppressWarnings(require("shiny"))==FALSE) {#
         install.packages("shiny",repos="http://cran.cnr.berkeley.edu/");#
         library("shiny");#
@@ -855,7 +866,8 @@ if (suppressWarnings(require("leaflet"))==FALSE) {#
 if (suppressWarnings(require("mapview"))==FALSE) {#
         install.packages("mapview",repos="http://cran.cnr.berkeley.edu/");#
         library("mapview");#
-        }
+        }#
+#
 ##############################################################################################################
 ####################################### LOAD DATA FUNCTIONS, CONVERSION ######################################
 ##############################################################################################################
@@ -867,8 +879,6 @@ Credentials<-as.matrix(read.table("./credentials/Credentials.yml",row.names=1))#
 # Connect to PostgreSQL#
 Driver <- dbDriver("PostgreSQL") # Establish database driver#
 Connection <- dbConnect(Driver, dbname = Credentials["database:",], host = Credentials["host:",], port = Credentials["port:",], user = Credentials["user:",], password = Credentials["password:",])
-##############################################################################################################
-######################################### SERVER FUNCTIONS, CONVERSION #######################################
 ##############################################################################################################
 # Query the required map data and join it together#
 queryMap<-function(collection_id) {#
@@ -910,8 +920,7 @@ getAbstract<-function(collection_id) {#
         return(unlist(Abstract))#
         }
 Map<-queryMap(12)
-mapviewOptions(basemaps=c("OpenStreetMap","CartoDB.Positron"))#
-    mapview(map,color=map$color)
-mapviewOptions(basemaps=c("OpenStreetMap","CartoDB.Positron"))#
-    mapview(Map,color=Map$color)
 leaflet(mapview(Map,color=Map$color)@map)
+mapviewOptions()
+mapview(Map,color=Map$color)
+mapview(Map,color=Map$color)@map

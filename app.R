@@ -88,7 +88,7 @@ ui <- fluidPage(
                 sidebarPanel(
                         selectInput("county","Choose a county",choices = Counties$place_name),
                         selectInput("map", "Choose a map:",choices = NCGMP09_titles$title),
-                        selectInput("format","Choose a map format:",choices = c("GeoJSON","KML","ESRI Shapefile")),
+                        selectInput("format","Choose a map format:",choices = c("OpenFileGDB","GeoJSON","KML","ESRI Shapefile")),
                         # Button
                         downloadButton("downloadData", "Download")
                         ),
@@ -104,30 +104,57 @@ ui <- fluidPage(
 ######################################### SERVER FUNCTIONS, CONVERSION ######################################
 #############################################################################################################
 # Query the required map data and join it together
-queryMap<-function(collection_id) {
-        Polygons<-paste0('SELECT "Label",geom FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))
-        MapUnitPolys = sf::st_read(Connection,query = Polygons)
-        Description<-paste0('SELECT "Label","AreaFillRGB" AS color FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
+queryPolys<-function(collection_id) {
+        Polygons<-paste0('SELECT * FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))
+        MapUnitPolys<-sf::st_read(Connection, query=Polygons)
+        Description<-paste0('SELECT * FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
         DescriptionOfMapUnits<-dbGetQuery(Connection,Description)
         MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)
         # Remove polys without color
-        MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$color)!=TRUE)
-        MapUnitPolys$color<-getColors(MapUnitPolys)
+        MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
+        MapUnitPolys$AreaFillRGB<-getColors(MapUnitPolys)
         return(MapUnitPolys)
         }
 
-# Get the color vector from QueryMap
-getColors<-function(QueryMap) {
-        color<-sapply(QueryMap$color,strsplit,";")
+# Merge the lines layers together
+queryLines<-function(collection_id) {
+        Lines<-paste0('SELECT * FROM ncgmp09."ContactsAndFaults" WHERE collection_id = ',sQuote(collection_id))
+        ContactsAndFaults<-sf::st_read(Connection, query=Lines)
+        if (sum(dim(ContactsAndFaults))==0) {return(NA)}
+        Glossary<-paste0('SELECT * FROM ncgmp09."Glossary" WHERE collection_id = ',sQuote(collection_id)) 
+        Glossary<-dbGetQuery(Connection,Glossary)
+        if (sum(dim(Glossary))==0) {return(NA)}
+        # Do a left join of ContactsAndFaults with MapUnits
+        ContactsAndFaults<-merge(ContactsAndFaults,Glossary,by.x="Type",by.y="Term",all.x=TRUE)
+        return(ContactsAndFaults)
+        }
+
+# Merge the points layers together
+queryPoints<-function(collection_id) {
+        Points<-paste0('SELECT * FROM ncgmp09."ContactsAndFaults" WHERE collection_id = ',sQuote(collection_id))
+        OrientationPoints<-sf::st_read(Connection, query=Points)
+        if (sum(dim(Points))==0) {return(NA)}
+        Glossary<-paste0('SELECT * FROM ncgmp09."Glossary" WHERE collection_id = ',sQuote(collection_id)) 
+        Glossary<-dbGetQuery(Connection,Glossary)
+        if (sum(dim(Glossary))==0) {return(NA)}
+        # Do a left join of ContactsAndFaults with MapUnits
+        OrientationPoints<-merge(OrientationPoints,Glossary,by.x="Type",by.y="Term",all.x=TRUE)
+        return(OrientationPoints)
+        }
+
+# Get the color vector from QueryPolys
+getColors<-function(QueryPolys) {
+        color<-sapply(QueryPolys$AreaFillRGB,strsplit,";")
         color<-sapply(color,function(x) rgb(as.numeric(x[1]),as.numeric(x[2]),as.numeric(x[3]),maxColorValue=255))
         return(color)
         }
 
 # Plot the map
-plotMap<-function(QueryMap) {
-        mapview(QueryMap,col.regions=QueryMap$color)@map
+plotMap<-function(QueryPolys) {
+        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$AreaFillRGB)@map
         }
 
+# A function to get and display the abstract
 getAbstract<-function(collection_id) {
         # Construct the Query
         Query<-paste0(
@@ -143,6 +170,26 @@ getAbstract<-function(collection_id) {
         return(unlist(Abstract))
         }
 
+# Write the results out to to the target folder
+writeLayers<-function(Input,Output,Format) {
+        sf::st_write(queryPolys(Input),paste(Output,"MapUnitPolys",sep="/"),delete_dsn=TRUE,driver=Format)
+        Lines<-queryLines(Input)
+        if (is.na(Lines)!=TRUE) {
+                sf::st_write(Lines,paste(Output,"ContactsAndFaults",sep="/"),delete_dsn=TRUE,driver=Format)
+                }
+        Points<-queryPoints(Input)
+        if (is.na(Points)!=TRUE) {
+                sf::st_write(Points,paste(Output,"OrientationPoints",sep="/"),delete_dsn=TRUE,driver=Format)
+                }
+        return(Output)
+        }
+
+# Get the geodatabase
+getGDB<-function(collection_id) {
+        Path<-dbGetQuery(Connection,paste0("SELECT azgs_path FROM collections WHERE collection_id = ",sQuote(collection_id)))
+        return(paste(Path,"gisdata","ncgmp09",sep="/"))
+        }
+
 ##################################### SERVER FUNCTIONS SCRIPT, CONVERSION ###################################
 # Define server logic to plot map
 server <- function(input, output) {
@@ -155,23 +202,24 @@ server <- function(input, output) {
            })
    
    output$map_plot<-renderLeaflet({
-           plotMap(queryMap(collection_id()))
+           plotMap(queryPolys(collection_id()))
            })
-   
-   file_format<-reactive({
-           switch(input$format,
-                "ESRI Shapefile" = "shp",
-                "GeoJSON" = "geojson",
-                "KML" = "kml")
-                })
    
    output$downloadData<-downloadHandler(
            filename=function() {
-                   paste(gsub(" ","",input$map),file_format(),sep=".")
-           },
+                "output.zip"
+                },
            content = function(file) {
-                   sf::st_write(queryMap(collection_id()),file)
-           })
+                Output<-switch(input$format,
+                        "OpenFileGDB" = getGDB(collection_id()),
+                        "GeoJSON" = writeLayers(collection_id(),tempdir(),"GeoJSON"),
+                        "KML" = writeLayers(collection_id(),tempdir(),"KML"),
+                        "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"ESRI Shapefile")
+                        )
+                zip(file,Output,flags = "-r -j -m")
+                },
+           contentType = "application/zip"
+           )
    }
 
 # Run the application 
