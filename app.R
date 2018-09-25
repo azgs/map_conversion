@@ -169,14 +169,14 @@ getAbstract<-function(collection_id) {
 
 # Write the results out to to the target folder
 writeLayers<-function(Input,Output,Format) {
-        sf::st_write(queryPolys(Input),paste(Output,"MapUnitPolys",sep="/"),delete_dsn=TRUE,driver=Format)
+        sf::st_write(queryPolys(Input),paste0(Output,"/","MapUnitPolys",".",Format),delete_dsn=TRUE)
         Lines<-queryLines(Input)
         if (is.na(Lines)!=TRUE) {
-                sf::st_write(Lines,paste(Output,"ContactsAndFaults",sep="/"),delete_dsn=TRUE,driver=Format)
+                sf::st_write(Lines,paste0(Output,"/","ContactsAndFaults",".",Format),delete_dsn=TRUE)
                 }
         Points<-queryPoints(Input)
         if (is.na(Points)!=TRUE) {
-                sf::st_write(Points,paste(Output,"OrientationPoints",sep="/"),delete_dsn=TRUE,driver=Format)
+                sf::st_write(Points,paste0(Output,"/","OrientationPoints",".",Format),delete_dsn=TRUE)
                 }
         return(Output)
         }
@@ -214,9 +214,9 @@ server <- function(input, output,session) {
            content = function(file) {
                 Output<-switch(input$format,
                         "OpenFileGDB" = getGDB(collection_id()),
-                        "GeoJSON" = writeLayers(collection_id(),tempdir(),"GeoJSON"),
-                        "KML" = writeLayers(collection_id(),tempdir(),"KML"),
-                        "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"ESRI Shapefile")
+                        "GeoJSON" = writeLayers(collection_id(),tempdir(),"geojson"),
+                        "KML" = writeLayers(collection_id(),tempdir(),"kml"),
+                        "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"shp")
                         )
                 zip(file,Output,flags = "-r -j -m")
                 },
@@ -226,3 +226,5 @@ server <- function(input, output,session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+# runApp(port=5448, host="0.0.0.0")
