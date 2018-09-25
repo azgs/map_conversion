@@ -70,9 +70,6 @@ Query<-paste0(
 # Query available ncgmp09 datasets
 NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
 
-# Query available counties
-Counties<-suppressWarnings(dbGetQuery(Connection,"SELECT arizona_place_id AS place_id, arizona_place_name AS place_name, geom FROM dicts.arizona_places WHERE placetype='county' AND within_arizona = 'TRUE';"))
-
 #############################################################################################################
 ###################################### BUILD PAGE FUNCTIONS, CONVERSION #####################################
 #############################################################################################################
@@ -86,8 +83,7 @@ ui <- fluidPage(
         # Sidebar with a slider input for number of bins 
         sidebarLayout(
                 sidebarPanel(
-                        selectInput("county","Choose a county",choices = Counties$place_name),
-                        selectInput("map", "Choose a map:",choices = NCGMP09_titles$title),
+                        selectInput("map", "Choose a map:",choices=c("",NCGMP09_titles$title),selectize=TRUE),
                         selectInput("format","Choose a map format:",choices = c("OpenFileGDB","GeoJSON","KML","ESRI Shapefile")),
                         # Button
                         downloadButton("downloadData", "Download")
@@ -151,11 +147,12 @@ getColors<-function(QueryPolys) {
 
 # Plot the map
 plotMap<-function(QueryPolys) {
-        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$AreaFillRGB)@map
+        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$AreaFillRGB, map.types = "OpenStreetMap.DE",layer.name="layer")@map
         }
 
 # A function to get and display the abstract
 getAbstract<-function(collection_id) {
+        if (length(collection_id)!=1) {return("Please select an Arizona Geological Survey map for download.")}
         # Construct the Query
         Query<-paste0(
                 "SELECT char_string AS title
@@ -192,18 +189,23 @@ getGDB<-function(collection_id) {
 
 ##################################### SERVER FUNCTIONS SCRIPT, CONVERSION ###################################
 # Define server logic to plot map
-server <- function(input, output) {
-   collection_id<-reactive({
-           NCGMP09_titles[which(NCGMP09_titles$title==input$map),"collection_id"]
-           })
+server <- function(input, output,session) {
+        collection_id<-reactive({
+                NCGMP09_titles[which(NCGMP09_titles$title==input$map),"collection_id"]
+                })
    
-   output$abstract<-renderText({
-           getAbstract(collection_id())
-           })
+        output$abstract<-renderText({
+                getAbstract(collection_id())
+                })
    
-   output$map_plot<-renderLeaflet({
-           plotMap(queryPolys(collection_id()))
-           })
+        updateSelectizeInput(session,"map",choices=c("",NCGMP09_titles$title),server=TRUE)
+        
+        output$map_plot<-renderLeaflet({
+                if (length(collection_id())!=1) {
+                        mapview(st_sfc(st_point(c(-110.94287,32.22821)),crs=4326))@map
+                        }
+                else {plotMap(queryPolys(collection_id()))}
+                })
    
    output$downloadData<-downloadHandler(
            filename=function() {
