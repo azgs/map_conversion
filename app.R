@@ -22,6 +22,12 @@ if (suppressWarnings(require("shiny"))==FALSE) {
         library("shiny");
         } 
 
+# Load or install shiny package
+if (suppressWarnings(require("shinydashboard"))==FALSE) {
+        install.packages("shinydashboard",repos="http://cran.cnr.berkeley.edu/");
+        library("shinydashboard");
+        } 
+
 # Load or install RPostgreSQL package
 if (suppressWarnings(require("RPostgreSQL"))==FALSE) {
         install.packages("RPostgreSQL",repos="http://cran.cnr.berkeley.edu/");
@@ -89,8 +95,33 @@ ui <- fluidPage(
                         downloadButton("downloadData", "Download")
                         ),
                 mainPanel(
-                        textOutput("abstract")
-                        ),
+                        fluidRow(width=12,
+                                shinydashboard::box(
+                                        width=12,
+                                        status="primary",
+                                        title="Abstract",
+                                        solidHeader = TRUE,
+                                        background = "light-blue",
+                                        textOutput("abstract")
+                                        )
+                                ),
+                        fluidRow(
+                                shinydashboard::box(
+                                        status="primary",
+                                        title="Year",
+                                        solidHeader = TRUE,
+                                        background = "light-blue",
+                                        htmlOutput("year")
+                                       ),
+                                shinydashboard::box(
+                                        status="primary",
+                                        title="Authors",
+                                        solidHeader = TRUE,
+                                        background = "light-blue",
+                                        htmlOutput("authors")
+                                        )
+                                )
+                        )
                 ),
         # Show a plot of the generated distribution
         leafletOutput("map_plot")
@@ -155,7 +186,7 @@ getAbstract<-function(collection_id) {
         if (length(collection_id)!=1) {return("Please select an Arizona Geological Survey map for download.")}
         # Construct the Query
         Query<-paste0(
-                "SELECT char_string AS title
+                "SELECT char_string::text AS title
                 FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = '",collection_id,"') AS A,
                 jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
                 jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
@@ -187,6 +218,48 @@ getGDB<-function(collection_id) {
         return(paste(Path,"gisdata","ncgmp09",sep="/"))
         }
 
+# Get the year
+getYear<-function(collection_id) {
+        Query<-paste0(
+                "SELECT result::text 
+                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
+                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
+                                     jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
+                                     jsonb_array_elements(dataID -> 'gmd:citation') citation,
+                                     jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
+                                     jsonb_array_elements(ci_citation -> 'gmd:date') date,
+                                     jsonb_array_elements(date -> 'gmd:CI_Date') ci_date,
+                                     jsonb_array_elements(ci_date -> 'gmd:date') date_2,
+                                     jsonb_array_elements(date_2 -> 'gco:DateTime') result
+                                     ;")
+        Pubdate<-unlist(dbGetQuery(Connection,Query))
+        Year<-substring(Pubdate,2,5) # hardcoded year extraction
+        return(Year)
+        }
+
+# Get the authors
+getAuthors<-function(collection_id) {
+        Query<-paste0(
+        "SELECT char_string::text 
+        FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
+        jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
+                             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
+                             jsonb_array_elements(dataID -> 'gmd:citation') citation,
+                             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
+                             jsonb_array_elements(ci_citation -> 'gmd:citedResponsibleParty') party,
+                             jsonb_array_elements(party -> 'gmd:CI_ResponsibleParty') responsible,
+                             jsonb_array_elements(responsible -> 'gmd:individualName') individual,
+                             jsonb_array_elements(individual -> 'gco:CharacterString') char_string
+                             ;")
+        Authors<-unlist(dbGetQuery(Connection,Query))
+        Authors<-subset(Authors,Authors!='"Missing"')
+        Authors<-gsub('"',"",Authors)
+        if (length(Authors)>1) {
+                Authors<-paste(Authors,collapse=";    ")
+                }
+        return((Authors))
+        }
+
 ##################################### SERVER FUNCTIONS SCRIPT, CONVERSION ###################################
 # Define server logic to plot map
 server <- function(input, output,session) {
@@ -194,6 +267,16 @@ server <- function(input, output,session) {
                 NCGMP09_titles[which(NCGMP09_titles$title==input$map),"collection_id"]
                 })
    
+        output$year<-renderText({
+                req(collection_id())
+                paste("<b>",getYear(collection_id()),"</b>")
+                })
+        
+        output$authors<-renderText({
+                req(collection_id())
+                paste("<b>",getAuthors(collection_id()),"</b>")
+                })
+        
         output$abstract<-renderText({
                 getAbstract(collection_id())
                 })
