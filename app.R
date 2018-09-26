@@ -46,6 +46,12 @@ if (suppressWarnings(require("mapview"))==FALSE) {
         library("mapview");
         }
 
+# Load or install shinyjs package
+if (suppressWarnings(require("shinyjs"))==FALSE) {
+        install.packages("shinyjs",repos="http://cran.cnr.berkeley.edu/");
+        library("shinyjs");
+        }
+
 #############################################################################################################
 ####################################### LOAD DATA FUNCTIONS, CONVERSION #####################################
 #############################################################################################################
@@ -83,48 +89,61 @@ NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
 
 ######################################### BUILD PAGE SCRIPT, CONVERSION #####################################
 # Define UI for application that draws a histogram
-ui <- fluidPage(
+ui <- dashboardPage(
         # Application title
-        titlePanel("Arizona Geological Survey, Map Conversion Tool"),
-        # Sidebar with a slider input for number of bins 
-        sidebarLayout(
-                sidebarPanel(
-                        selectInput("map", "Choose a map:",choices=c("",NCGMP09_titles$title),selectize=TRUE),
-                        selectInput("format","Choose a map format:",choices = c("OpenFileGDB","GeoJSON","KML","ESRI Shapefile")),
-                        # Button
-                        downloadButton("downloadData", "Download")
-                        ),
-                mainPanel(
-                        fluidRow(width=12,
-                                shinydashboard::box(
-                                        width=12,
-                                        status="primary",
-                                        title="Abstract",
-                                        solidHeader = TRUE,
-                                        background = "light-blue",
-                                        textOutput("abstract")
-                                        )
-                                ),
-                        fluidRow(
-                                shinydashboard::box(
-                                        status="primary",
-                                        title="Year",
-                                        solidHeader = TRUE,
-                                        background = "light-blue",
-                                        htmlOutput("year")
-                                       ),
-                                shinydashboard::box(
-                                        status="primary",
-                                        title="Authors",
-                                        solidHeader = TRUE,
-                                        background = "light-blue",
-                                        htmlOutput("authors")
-                                        )
-                                )
-                        )
+        dashboardHeader(
+                title="Select Map"
                 ),
-        # Show a plot of the generated distribution
-        leafletOutput("map_plot")
+        # Sidebar with a slider input for number of bins 
+        dashboardSidebar(
+                selectInput("map", "Choose a map:",choices=c("",NCGMP09_titles$title),selectize=TRUE),
+                selectInput("format","Choose a map format:",choices = c("OpenFileGDB","GeoJSON","KML","ESRI Shapefile")),
+                downloadButton('downloadData', 'Download Data',class="butt"),
+                tags$head(tags$style(".butt{background-color:white;} .butt{color: black;} .butt{margin-left: 15px;}")),
+                tags$style(".skin-blue .sidebar a {color: #444}")
+                ),
+        dashboardBody(
+                shinyjs::useShinyjs(),
+                fluidRow(width=12,
+                        shinydashboard::box(
+                                width=12,
+                                status="primary",
+                                title="Abstract",
+                                solidHeader = TRUE,
+                                textOutput("abstract")
+                                )
+                        ),
+                fluidRow(
+                        shinydashboard::box(
+                                id="year_box",
+                                width=2,
+                                status="primary",
+                                title="Year",
+                                solidHeader = TRUE,
+                                htmlOutput("year")
+                                ),
+                        shinydashboard::box(
+                                id="author_box",
+                                width=5,
+                                status="primary",
+                                title="Authors",
+                                solidHeader = TRUE,
+                                htmlOutput("authors")
+                                ),
+                        shinydashboard::box(
+                                id="source_box",
+                                width=5,
+                                status="primary",
+                                title="Source",
+                                solidHeader = TRUE,
+                                htmlOutput("url")
+                                )
+                        ),
+                fluidRow(
+                        # Show a plot of the generated distribution
+                        leafletOutput("map_plot")
+                        )
+                )
         )
 
 #############################################################################################################
@@ -136,7 +155,7 @@ queryPolys<-function(collection_id) {
         MapUnitPolys<-sf::st_read(Connection, query=Polygons)
         Description<-paste0('SELECT * FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
         DescriptionOfMapUnits<-dbGetQuery(Connection,Description)
-        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="Label",all.x=TRUE)
+        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
         # Remove polys without color
         MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
         MapUnitPolys$AreaFillRGB<-getColors(MapUnitPolys)
@@ -260,13 +279,32 @@ getAuthors<-function(collection_id) {
         return((Authors))
         }
 
+# Get the linkt o the current repository
+getURL<-function(collection_id) {
+        Query<-paste0(
+                "SELECT char_string::text 
+                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
+                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:distributionInfo}') distribution_info,
+                jsonb_array_elements(distribution_info -> 'gmd:MD_Distribution') distribution,
+                jsonb_array_elements(distribution -> 'gmd:transferOptions') transfer,
+                jsonb_array_elements(transfer ->  'gmd:MD_DigitalTransferOptions') digital,
+                jsonb_array_elements(digital -> 'gmd:onLine') online,
+                jsonb_array_elements(online -> 'gmd:CI_OnlineResource') online_resource,
+                jsonb_array_elements(online_resource -> 'gmd:linkage') linkage,
+                jsonb_array_elements(linkage -> 'gmd:URL') char_string
+                ;")
+        URL<-dbGetQuery(Connection,Query)
+        return(URL)
+        }
+
+
 ##################################### SERVER FUNCTIONS SCRIPT, CONVERSION ###################################
 # Define server logic to plot map
 server <- function(input, output,session) {
         collection_id<-reactive({
                 NCGMP09_titles[which(NCGMP09_titles$title==input$map),"collection_id"]
                 })
-   
+        
         output$year<-renderText({
                 req(collection_id())
                 paste("<b>",getYear(collection_id()),"</b>")
@@ -280,32 +318,37 @@ server <- function(input, output,session) {
         output$abstract<-renderText({
                 getAbstract(collection_id())
                 })
+
+        output$url<-renderText({
+                req(collection_id())
+                paste("<a href=",getURL(collection_id()),">Arizona Geological Survey Repository</a>")
+                })
    
         updateSelectizeInput(session,"map",choices=c("",NCGMP09_titles$title),server=TRUE)
         
         output$map_plot<-renderLeaflet({
                 if (length(collection_id())!=1) {
-                        mapview(st_sfc(st_point(c(-110.94287,32.22821)),crs=4326))@map
+                        mapview(st_sfc(st_point(c(-110.94287,32.22821)),crs=4326),map.types="OpenStreetMap.DE",layer.name="Arizona Geological Survey Building")@map
                         }
                 else {plotMap(queryPolys(collection_id()))}
                 })
-   
-   output$downloadData<-downloadHandler(
-           filename=function() {
-                "output.zip"
-                },
-           content = function(file) {
-                Output<-switch(input$format,
-                        "OpenFileGDB" = getGDB(collection_id()),
-                        "GeoJSON" = writeLayers(collection_id(),tempdir(),"geojson"),
-                        "KML" = writeLayers(collection_id(),tempdir(),"kml"),
-                        "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"shp")
-                        )
-                zip(file,Output,flags = "-r -j -m")
-                },
-           contentType = "application/zip"
-           )
-   }
+        
+        output$downloadData<-downloadHandler(
+                filename=function() {
+                        "output.zip"
+                        },
+                content = function(file) {
+                        Output<-switch(input$format,
+                                "OpenFileGDB" = getGDB(collection_id()),
+                                "GeoJSON" = writeLayers(collection_id(),tempdir(),"geojson"),
+                                "KML" = writeLayers(collection_id(),tempdir(),"kml"),
+                                "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"shp")
+                                )
+                        zip(file,Output,flags = "-r -j -m")
+                        },
+                contentType = "application/zip"
+                )
+        }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
