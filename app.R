@@ -97,14 +97,23 @@ ui <- dashboardPage(
         # Sidebar with a slider input for number of bins 
         dashboardSidebar(
                 selectInput("map", "Choose a map:",choices=c("",NCGMP09_titles$title),selectize=TRUE),
-                selectInput("format","Choose a map format:",choices = c("OpenFileGDB","GeoJSON","KML","ESRI Shapefile")),
+                selectInput("format","Choose a map format:",choices = c("ESRI File Geodatabase","GeoJSON","KML","ESRI Shapefile")),
                 downloadButton('downloadData', 'Download Data',class="butt"),
                 tags$head(tags$style(".butt{background-color:white;} .butt{color: black;} .butt{margin-left: 15px;}")),
                 tags$style(".skin-blue .sidebar a {color: #444}")
                 ),
         dashboardBody(
                 shinyjs::useShinyjs(),
-                fluidRow(width=12,
+                fluidRow(id="instructions_box",
+                         shinydashboard::box(
+                                 width=12,
+                                 status="primary",
+                                 title="Instructions",
+                                 solidHeader=TRUE,
+                                 includeHTML("www/instructions.html")
+                                )
+                        ),
+                shinyjs::hidden(fluidRow(id="abstract_box",
                         shinydashboard::box(
                                 width=12,
                                 status="primary",
@@ -112,8 +121,8 @@ ui <- dashboardPage(
                                 solidHeader = TRUE,
                                 textOutput("abstract")
                                 )
-                        ),
-                fluidRow(
+                        )),
+                shinyjs::hidden(fluidRow(id="metadata",
                         shinydashboard::box(
                                 id="year_box",
                                 width=2,
@@ -126,7 +135,7 @@ ui <- dashboardPage(
                                 id="author_box",
                                 width=5,
                                 status="primary",
-                                title="Authors",
+                                title="Author(s)",
                                 solidHeader = TRUE,
                                 htmlOutput("authors")
                                 ),
@@ -138,7 +147,7 @@ ui <- dashboardPage(
                                 solidHeader = TRUE,
                                 htmlOutput("url")
                                 )
-                        ),
+                        )),
                 fluidRow(
                         # Show a plot of the generated distribution
                         leafletOutput("map_plot")
@@ -202,7 +211,6 @@ plotMap<-function(QueryPolys) {
 
 # A function to get and display the abstract
 getAbstract<-function(collection_id) {
-        if (length(collection_id)!=1) {return("Please select an Arizona Geological Survey map for download.")}
         # Construct the Query
         Query<-paste0(
                 "SELECT char_string::text AS title
@@ -276,7 +284,7 @@ getAuthors<-function(collection_id) {
         if (length(Authors)>1) {
                 Authors<-paste(Authors,collapse=";    ")
                 }
-        return((Authors))
+        return(Authors)
         }
 
 # Get the linkt o the current repository
@@ -297,7 +305,6 @@ getURL<-function(collection_id) {
         return(URL)
         }
 
-
 ##################################### SERVER FUNCTIONS SCRIPT, CONVERSION ###################################
 # Define server logic to plot map
 server <- function(input, output,session) {
@@ -310,12 +317,26 @@ server <- function(input, output,session) {
                 paste("<b>",getYear(collection_id()),"</b>")
                 })
         
+        observeEvent(input$map,{
+                if (length(collection_id())!=1) {
+                        shinyjs::hide("metadata")
+                        shinyjs::hide("abstract_box")
+                        shinyjs::show("instructions_box")
+                        }
+                else {
+                        shinyjs::show("metadata")
+                        shinyjs::show("abstract_box")
+                        shinyjs::hide("instructions_box")
+                        }
+                })
+        
         output$authors<-renderText({
                 req(collection_id())
                 paste("<b>",getAuthors(collection_id()),"</b>")
                 })
         
         output$abstract<-renderText({
+                req(collection_id())
                 getAbstract(collection_id())
                 })
 
@@ -339,7 +360,7 @@ server <- function(input, output,session) {
                         },
                 content = function(file) {
                         Output<-switch(input$format,
-                                "OpenFileGDB" = getGDB(collection_id()),
+                                "ESRI File Geodatabase" = getGDB(collection_id()),
                                 "GeoJSON" = writeLayers(collection_id(),tempdir(),"geojson"),
                                 "KML" = writeLayers(collection_id(),tempdir(),"kml"),
                                 "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"shp")
