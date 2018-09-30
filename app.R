@@ -150,7 +150,7 @@ ui <- dashboardPage(
                         )),
                 fluidRow(
                         # Show a plot of the generated distribution
-                        leafletOutput("map_plot")
+                        leafletOutput("map_plot",height=600)
                         )
                 )
         )
