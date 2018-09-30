@@ -167,7 +167,7 @@ queryPolys<-function(collection_id) {
         MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
         # Remove polys without color
         MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
-        MapUnitPolys$AreaFillRGB<-getColors(MapUnitPolys)
+        MapUnitPolys$HexCode<-getColors(MapUnitPolys)
         return(MapUnitPolys)
         }
 
@@ -206,7 +206,7 @@ getColors<-function(QueryPolys) {
 
 # Plot the map
 plotMap<-function(QueryPolys) {
-        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$AreaFillRGB, map.types = "OpenStreetMap.DE",layer.name="layer")@map
+        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$HexCode, map.types = "OpenStreetMap.DE",layer.name="layer")@map
         }
 
 # A function to get and display the abstract
