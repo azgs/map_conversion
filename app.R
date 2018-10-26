@@ -65,22 +65,12 @@ Driver <- dbDriver("PostgreSQL") # Establish database driver
 Connection <- dbConnect(Driver, dbname = Credentials["database:",], host = Credentials["host:",], port = Credentials["port:",], user = Credentials["user:",], password = Credentials["password:",])
 
 # Construct the Query
-Query<-paste0(
-             "SELECT collection_id, char_string AS title
-             FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id IN 
-             (SELECT DISTINCT collection_id FROM ncgmp09.",
-             dQuote("MapUnitPolys"),
-             ")) AS A,
-             jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
-             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
-             jsonb_array_elements(dataID -> 'gmd:citation') citation,
-             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
-             jsonb_array_elements(ci_citation -> 'gmd:title') title,
-             jsonb_array_elements(title -> 'gco:CharacterString') char_string
-             ;")
-
+Query<-paste0("SELECT collection_id, formal_name AS full_title, informal_name AS title
+             FROM collections WHERE collection_id IN (SELECT DISTINCT collection_id FROM ncgmp09.",dQuote("MapUnitPolys"),");"
+             )
+            
 # Query available ncgmp09 datasets
-NCGMP09_titles<-suppressWarnings(dbGetQuery(Connection,Query))
+Titles<-suppressWarnings(dbGetQuery(Connection,Query))
 
 #############################################################################################################
 ###################################### BUILD PAGE FUNCTIONS, CONVERSION #####################################
@@ -96,7 +86,7 @@ ui <- dashboardPage(
                 ),
         # Sidebar with a slider input for number of bins 
         dashboardSidebar(
-                selectInput("map", "Choose a map:",choices=c("",NCGMP09_titles$title),selectize=TRUE),
+                selectInput("map", "Choose a map:",choices=c("",Titles$title),selectize=TRUE),
                 selectInput("format","Choose a map format:",choices = c("ESRI File Geodatabase","GeoJSON","KML","ESRI Shapefile")),
                 downloadButton('downloadData', 'Download Data',class="butt"),
                 tags$head(tags$style(".butt{background-color:white;} .butt{color: black;} .butt{margin-left: 15px;}")),
@@ -117,7 +107,7 @@ ui <- dashboardPage(
                         shinydashboard::box(
                                 width=12,
                                 status="primary",
-                                title="Abstract",
+                                title=textOutput("title"),
                                 solidHeader = TRUE,
                                 textOutput("abstract")
                                 )
@@ -309,7 +299,7 @@ getURL<-function(collection_id) {
 # Define server logic to plot map
 server <- function(input, output,session) {
         collection_id<-reactive({
-                NCGMP09_titles[which(NCGMP09_titles$title==input$map),"collection_id"]
+                Titles[which(Titles$title==input$map),"collection_id"]
                 })
         
         output$year<-renderText({
@@ -330,6 +320,11 @@ server <- function(input, output,session) {
                         }
                 })
         
+        output$title<-renderText({
+                req(collection_id())
+                Titles[which(Titles[,"collection_id"]==collection_id()),"full_title"]
+                })
+        
         output$authors<-renderText({
                 req(collection_id())
                 paste("<b>",getAuthors(collection_id()),"</b>")
@@ -345,7 +340,7 @@ server <- function(input, output,session) {
                 paste("<a href=",getURL(collection_id()),">Arizona Geological Survey Repository</a>")
                 })
    
-        updateSelectizeInput(session,"map",choices=c("",NCGMP09_titles$title),server=TRUE)
+        updateSelectizeInput(session,"map",choices=c("",Titles$title),server=TRUE)
         
         output$map_plot<-renderLeaflet({
                 if (length(collection_id())!=1) {
