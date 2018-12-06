@@ -152,6 +152,7 @@ ui <- dashboardPage(
 queryPolys<-function(collection_id) {
         Polygons<-paste0('SELECT * FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))
         MapUnitPolys<-sf::st_read(Connection, query=Polygons)
+        MapUnitPolys<-sf::st_transform(MapUnitPolys,4326) # hardcode in the wgs84
         Description<-paste0('SELECT * FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
         DescriptionOfMapUnits<-dbGetQuery(Connection,Description)
         MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
@@ -166,6 +167,7 @@ queryLines<-function(collection_id) {
         Lines<-paste0('SELECT * FROM ncgmp09."ContactsAndFaults" WHERE collection_id = ',sQuote(collection_id))
         ContactsAndFaults<-sf::st_read(Connection, query=Lines)
         if (sum(dim(ContactsAndFaults))==0) {return(NA)}
+        ContactsAndFaults<-sf::st_transform(ContactsAndFaults,4326) # hardcode in the wgs84
         Glossary<-paste0('SELECT * FROM ncgmp09."Glossary" WHERE collection_id = ',sQuote(collection_id)) 
         Glossary<-dbGetQuery(Connection,Glossary)
         if (sum(dim(Glossary))==0) {return(NA)}
@@ -179,6 +181,7 @@ queryPoints<-function(collection_id) {
         Points<-paste0('SELECT * FROM ncgmp09."ContactsAndFaults" WHERE collection_id = ',sQuote(collection_id))
         OrientationPoints<-sf::st_read(Connection, query=Points)
         if (sum(dim(Points))==0) {return(NA)}
+        OrientationPoints<-sf::st_transform(OrientationPoints,4326) # hardcode in the wgs84
         Glossary<-paste0('SELECT * FROM ncgmp09."Glossary" WHERE collection_id = ',sQuote(collection_id)) 
         Glossary<-dbGetQuery(Connection,Glossary)
         if (sum(dim(Glossary))==0) {return(NA)}
