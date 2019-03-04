@@ -158,7 +158,7 @@ queryPolys<-function(collection_id) {
         MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
         # Remove polys without color
         MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
-        MapUnitPolys$HexCode<-getColors(MapUnitPolys)
+        MapUnitPolys$OGR_STYLE<-getColors(MapUnitPolys)
         return(MapUnitPolys)
         }
 
@@ -199,7 +199,7 @@ getColors<-function(QueryPolys) {
 
 # Plot the map
 plotMap<-function(QueryPolys) {
-        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$HexCode, map.types = "OpenStreetMap.DE",layer.name="layer")@map
+        mapview(QueryPolys[,c("FullName","Age","GeneralLithology","Description")],col.regions=QueryPolys$OGR_STYLE, map.types = "OpenStreetMap.DE",layer.name="layer")@map
         }
 
 # A function to get and display the abstract
@@ -228,6 +228,23 @@ writeLayers<-function(Input,Output,Format) {
         Points<-queryPoints(Input)
         if (is.na(Points)!=TRUE) {
                 sf::st_write(Points,paste0(Output,"/","OrientationPoints",".",Format),delete_dsn=TRUE)
+                }
+        return(Output)
+        }
+                      
+# Write the results out to to the target folder, but force libkml
+writeLIBKML<-function(Input,Output) {
+        Polygons<-queryPolys(Input)
+        # Style the polygons for KML
+        Polygons$OGR_STYLE<-paste0("BRUSH(fc:",Polygons$OGR_STYLE,");(PEN(c:#000000,w:1px)")
+        sf::st_write(Polygons,paste0(Output,"/MapUnitPolys.kml"),driver="libkml",delete_dsn=TRUE)
+        Lines<-queryLines(Input)
+        if (is.na(Lines)!=TRUE) {
+                sf::st_write(Lines,paste0(Output,"/ContactsAndFaults.kml"),driver="libkml",delete_dsn=TRUE)
+                }
+        Points<-queryPoints(Input)
+        if (is.na(Points)!=TRUE) {
+                sf::st_write(Points,paste0(Output,"/OrientationPoints.kml"),driver="libkml",delete_dsn=TRUE)
                 }
         return(Output)
         }
