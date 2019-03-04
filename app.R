@@ -234,8 +234,13 @@ writeLayers<-function(Input,Output,Format) {
 
 # Get the geodatabase
 getGDB<-function(collection_id) {
+        Output<-tempdir()
         Path<-dbGetQuery(Connection,paste0("SELECT azgs_path FROM collections WHERE collection_id = ",sQuote(collection_id)))
-        return(paste(Path,"gisdata","ncgmp09",sep="/"))
+        Path<-paste0(Path,".tar.gz")
+        # I continue to make dangerous calls to system rather than using R scripts. Very irresponsible.
+        Query<-paste("cd",Output,"&&","tar xzf",Path)
+        system(Query)
+        return(paste(Output,collection_id,"gisdata","ncgmp09",sep="/"))
         }
 
 # Get the year
