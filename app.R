@@ -385,7 +385,8 @@ server <- function(input, output,session) {
                         Output<-switch(input$format,
                                 "ESRI File Geodatabase" = getGDB(collection_id()),
                                 "GeoJSON" = writeLayers(collection_id(),tempdir(),"geojson"),
-                                "KML" = writeLIBKML(collection_id(),tempdir()),
+                                "KML" = writeLayers(collection_id(),tempdir(),"kml"),
+                                "KML_COLOR" = writeLIBKML(collection_id(),tempdir()),
                                 "ESRI Shapefile" = writeLayers(collection_id(),tempdir(),"shp")
                                 )
                         zip(file,Output,flags = "-r -j -m")
