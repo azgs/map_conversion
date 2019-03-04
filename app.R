@@ -236,11 +236,14 @@ writeLayers<-function(Input,Output,Format) {
 getGDB<-function(collection_id) {
         Output<-tempdir()
         Path<-dbGetQuery(Connection,paste0("SELECT azgs_path FROM collections WHERE collection_id = ",sQuote(collection_id)))
-        Path<-paste0(Path,".tar.gz")
-        # I continue to make dangerous calls to system rather than using R scripts. Very irresponsible.
-        Query<-paste("cd",Output,"&&","tar xzf",Path)
-        system(Query)
-        return(paste(Output,collection_id,"gisdata","ncgmp09",sep="/"))
+        # add .tar.gz IF .tar.gz is not in the path arleady
+        # I do this because some versions of azlib collection table includs the zip extension and some do not.
+        if (grepl(".tar.gz",Path)!=TRUE) {
+                Path<-paste0(Path,".tar.gz")
+                }
+        # untar the results to the temp directory
+        untar(Path,paste0(collection_id,"/gisdata/ncgmp09"),exdir=Output)
+        return(Output)
         }
 
 # Get the year
