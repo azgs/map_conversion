@@ -44,10 +44,11 @@ exportGeoms<-function(Input=CommandArguments[1],Output=CommandArguments[2],Forma
         for (Layer in Geometries) {
 	        # Read a layer in
                 Read<-sf::st_read(Input,Layer)
+                # Convert to 4326... ALWAYS
+                Read<-sf::st_transform(Read,4326)
                 # Name the layer, attach path to output directory
                 Conversion<-paste0(Output,"/",Layer,".",Format)
-                # I add in the parameter to delete the dsn if we are overwriting, possibly dangerous but...
-                sf::st_write(Read,Conversion,delete_dsn=TRUE)
+                sf::st_write(Read,Conversion)
                 print(paste(Layer,"successfully exported")) # show which layers were written
                 }
         }
