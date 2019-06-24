@@ -154,7 +154,7 @@ queryPolys<-function(collection_id) {
         MapUnitPolys<-sf::st_read(Connection, query=Polygons)
         MapUnitPolys<-sf::st_transform(MapUnitPolys,4326) # hardcode in the wgs84
         Description<-paste0('SELECT * FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
-        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)
+        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)[,c("MapUnit","Description","Age","AreaFillRGB","GeneralLithology")]
         MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
         # Remove polys without color
         MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
@@ -169,7 +169,7 @@ queryLines<-function(collection_id) {
         if (sum(dim(ContactsAndFaults))==0) {return(NA)}
         ContactsAndFaults<-sf::st_transform(ContactsAndFaults,4326) # hardcode in the wgs84
         Glossary<-paste0('SELECT * FROM ncgmp09."Glossary" WHERE collection_id = ',sQuote(collection_id)) 
-        Glossary<-dbGetQuery(Connection,Glossary)
+        Glossary<-dbGetQuery(Connection,Glossary)[,c("Term","Definition")]
         if (sum(dim(Glossary))==0) {return(NA)}
         # Do a left join of ContactsAndFaults with MapUnits
         ContactsAndFaults<-merge(ContactsAndFaults,Glossary,by.x="Type",by.y="Term",all.x=TRUE)
@@ -183,7 +183,7 @@ queryPoints<-function(collection_id) {
         if (sum(dim(Points))==0) {return(NA)}
         OrientationPoints<-sf::st_transform(OrientationPoints,4326) # hardcode in the wgs84
         Glossary<-paste0('SELECT * FROM ncgmp09."Glossary" WHERE collection_id = ',sQuote(collection_id)) 
-        Glossary<-dbGetQuery(Connection,Glossary)
+        Glossary<-dbGetQuery(Connection,Glossary)[,c("Term","Definition")]
         if (sum(dim(Glossary))==0) {return(NA)}
         # Do a left join of ContactsAndFaults with MapUnits
         OrientationPoints<-merge(OrientationPoints,Glossary,by.x="Type",by.y="Term",all.x=TRUE)
