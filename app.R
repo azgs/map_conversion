@@ -152,13 +152,13 @@ ui <- dashboardPage(
 queryPolys<-function(collection_id) {
         Polygons<-paste0('SELECT * FROM ncgmp09."MapUnitPolys" WHERE collection_id = ',sQuote(collection_id))
         MapUnitPolys<-sf::st_read(Connection, query=Polygons)
-        MapUnitPolys<-sf::st_transform(MapUnitPolys,4326) # hardcode in the wgs84
-        Description<-paste0('SELECT * FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
-        DescriptionOfMapUnits<-dbGetQuery(Connection,Description)[,c("MapUnit","Description","Age","AreaFillRGB","GeneralLithology")]
-        MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
+        #MapUnitPolys<-sf::st_transform(MapUnitPolys,4326) # hardcode in the wgs84
+        #Description<-paste0('SELECT * FROM ncgmp09."DescriptionOfMapUnits" WHERE collection_id = ',sQuote(collection_id))
+        #DescriptionOfMapUnits<-dbGetQuery(Connection,Description)[,c("MapUnit","Description","Age","AreaFillRGB","GeneralLithology")]
+        #MapUnitPolys<-merge(MapUnitPolys,DescriptionOfMapUnits,by="MapUnit",all.x=TRUE)
         # Remove polys without color
-        MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
-        MapUnitPolys$OGR_STYLE<-getColors(MapUnitPolys)
+        #MapUnitPolys<-subset(MapUnitPolys,is.na(MapUnitPolys$AreaFillRGB)!=TRUE)
+        #MapUnitPolys$OGR_STYLE<-getColors(MapUnitPolys)
         return(MapUnitPolys)
         }
 
@@ -204,19 +204,21 @@ plotMap<-function(QueryPolys) {
 
 # A function to get and display the abstract
 getAbstract<-function(collection_id) {
-        # Construct the Query
-        Query<-paste0(
-                "SELECT char_string::text AS title
-                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = '",collection_id,"') AS A,
-                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
-                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
-                jsonb_array_elements(dataID -> 'gmd:abstract') abstract,
-                jsonb_array_elements(abstract ->  'gco:CharacterString') char_string
-                ;")
-        # Query abstract
-        Abstract<-suppressWarnings(dbGetQuery(Connection,Query))
-        return(unlist(Abstract))
+        return("temp")
         }
+#        Construct the Query
+#        Query<-paste0(
+#                "SELECT char_string::text AS title
+#                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = '",collection_id,"') AS A,
+#                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
+#                jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
+#                jsonb_array_elements(dataID -> 'gmd:abstract') abstract,
+#                jsonb_array_elements(abstract ->  'gco:CharacterString') char_string
+#                ;")
+#        # Query abstract
+#        Abstract<-suppressWarnings(dbGetQuery(Connection,Query))
+#        return(unlist(Abstract))
+#        }
 
 # Write the results out to to the target folder
 writeLayers<-function(Input,Output,Format) {
@@ -265,63 +267,69 @@ getGDB<-function(collection_id) {
 
 # Get the year
 getYear<-function(collection_id) {
-        Query<-paste0(
-                "SELECT result::text 
-                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
-                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
-                                     jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
-                                     jsonb_array_elements(dataID -> 'gmd:citation') citation,
-                                     jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
-                                     jsonb_array_elements(ci_citation -> 'gmd:date') date,
-                                     jsonb_array_elements(date -> 'gmd:CI_Date') ci_date,
-                                     jsonb_array_elements(ci_date -> 'gmd:date') date_2,
-                                     jsonb_array_elements(date_2 -> 'gco:DateTime') result
-                                     ;")
-        Pubdate<-unlist(dbGetQuery(Connection,Query))
-        Year<-substring(Pubdate,2,5) # hardcoded year extraction
-        return(Year)
+        return("temp")
         }
+#        Query<-paste0(
+#                "SELECT result::text 
+#                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
+#                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
+#                                     jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
+#                                     jsonb_array_elements(dataID -> 'gmd:citation') citation,
+#                                     jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
+#                                     jsonb_array_elements(ci_citation -> 'gmd:date') date,
+#                                     jsonb_array_elements(date -> 'gmd:CI_Date') ci_date,
+#                                     jsonb_array_elements(ci_date -> 'gmd:date') date_2,
+#                                     jsonb_array_elements(date_2 -> 'gco:DateTime') result
+#                                     ;")
+#        Pubdate<-unlist(dbGetQuery(Connection,Query))
+#        Year<-substring(Pubdate,2,5) # hardcoded year extraction
+#        return(Year)
+#        }
 
 # Get the authors
 getAuthors<-function(collection_id) {
-        Query<-paste0(
-        "SELECT char_string::text 
-        FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
-        jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
-                             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
-                             jsonb_array_elements(dataID -> 'gmd:citation') citation,
-                             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
-                             jsonb_array_elements(ci_citation -> 'gmd:citedResponsibleParty') party,
-                             jsonb_array_elements(party -> 'gmd:CI_ResponsibleParty') responsible,
-                             jsonb_array_elements(responsible -> 'gmd:individualName') individual,
-                             jsonb_array_elements(individual -> 'gco:CharacterString') char_string
-                             ;")
-        Authors<-unlist(dbGetQuery(Connection,Query))
-        Authors<-subset(Authors,Authors!='"Missing"')
-        Authors<-gsub('"',"",Authors)
-        if (length(Authors)>1) {
-                Authors<-paste(Authors,collapse=";    ")
-                }
-        return(Authors)
+        return("temp")
         }
+#        Query<-paste0(
+#        "SELECT char_string::text 
+#        FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
+#        jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:identificationInfo}') identificationInfo,
+#                             jsonb_array_elements(identificationInfo -> 'gmd:MD_DataIdentification') dataID,
+#                             jsonb_array_elements(dataID -> 'gmd:citation') citation,
+#                             jsonb_array_elements(citation ->  'gmd:CI_Citation') ci_citation,
+#                             jsonb_array_elements(ci_citation -> 'gmd:citedResponsibleParty') party,
+#                             jsonb_array_elements(party -> 'gmd:CI_ResponsibleParty') responsible,
+#                             jsonb_array_elements(responsible -> 'gmd:individualName') individual,
+#                             jsonb_array_elements(individual -> 'gco:CharacterString') char_string
+#                             ;")
+#        Authors<-unlist(dbGetQuery(Connection,Query))
+#        Authors<-subset(Authors,Authors!='"Missing"')
+#        Authors<-gsub('"',"",Authors)
+#        if (length(Authors)>1) {
+#                Authors<-paste(Authors,collapse=";    ")
+#                }
+#        return(Authors)
+#        }
 
 # Get the linkt o the current repository
 getURL<-function(collection_id) {
-        Query<-paste0(
-                "SELECT char_string::text 
-                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
-                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:distributionInfo}') distribution_info,
-                jsonb_array_elements(distribution_info -> 'gmd:MD_Distribution') distribution,
-                jsonb_array_elements(distribution -> 'gmd:transferOptions') transfer,
-                jsonb_array_elements(transfer ->  'gmd:MD_DigitalTransferOptions') digital,
-                jsonb_array_elements(digital -> 'gmd:onLine') online,
-                jsonb_array_elements(online -> 'gmd:CI_OnlineResource') online_resource,
-                jsonb_array_elements(online_resource -> 'gmd:linkage') linkage,
-                jsonb_array_elements(linkage -> 'gmd:URL') char_string
-                ;")
-        URL<-dbGetQuery(Connection,Query)
-        return(URL)
+        return("temp")
         }
+#       Query<-paste0(
+#                "SELECT char_string::text 
+#                FROM (SELECT collection_id, json_data FROM metadata.metadata WHERE collection_id = ",sQuote(collection_id),") AS A,
+#                jsonb_array_elements(json_data #> '{gmd:MD_Metadata,gmd:distributionInfo}') distribution_info,
+#                jsonb_array_elements(distribution_info -> 'gmd:MD_Distribution') distribution,
+#                jsonb_array_elements(distribution -> 'gmd:transferOptions') transfer,
+#                jsonb_array_elements(transfer ->  'gmd:MD_DigitalTransferOptions') digital,
+#                jsonb_array_elements(digital -> 'gmd:onLine') online,
+#                jsonb_array_elements(online -> 'gmd:CI_OnlineResource') online_resource,
+#                jsonb_array_elements(online_resource -> 'gmd:linkage') linkage,
+#                jsonb_array_elements(linkage -> 'gmd:URL') char_string
+#                ;")
+#        URL<-dbGetQuery(Connection,Query)
+#        return(URL)
+#        }
 
 ##################################### SERVER FUNCTIONS SCRIPT, CONVERSION ###################################
 # Define server logic to plot map
